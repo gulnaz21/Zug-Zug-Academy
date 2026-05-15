@@ -1,0 +1,420 @@
+name: 🚀 Zug-Zug Academy CI
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  greet:
+    name: 👋 Приветствие падавана
+    runs-on: ubuntu-latest
+    steps:
+      - name: ASCII-арт приветствие
+        run: |
+          echo ""
+          echo "  ╔══════════════════════════════════════════════════════╗"
+          echo "  ║                                                      ║"
+          echo "  ║      ☕  Z U G - Z U G   A C A D E M Y  ☕          ║"
+          echo "  ║                                                      ║"
+          echo "  ║         Добро пожаловать, будущий джавист!           ║"
+          echo "  ║                                                      ║"
+          echo "  ╚══════════════════════════════════════════════════════╝"
+          echo ""
+          echo "  Коммит от: ${{ github.actor }}"
+          echo "  Сообщение: ${{ github.event.head_commit.message }}"
+          echo ""
+          QUOTES=(
+            "💡 \"Сначала заставь работать, потом сделай красиво\" — Кент Бек"
+            "🧙 \"Если код работает с первого раза — что-то не так\" — народная мудрость"
+            "🔥 \"Java — это C++ без острых краёв\" — Джеймс Гослинг"
+            "🐛 \"Это не баг, это фича\" — каждый разработчик"
+            "☕ \"Hello, World! — программа, с которой всё начинается\""
+            "🎯 \"Преждевременная оптимизация — корень всех зол\" — Кнут"
+            "📚 \"Программы должны писаться для людей, а машины их лишь исполняют\" — Абельсон"
+            "🚀 \"Любой дурак может написать код, понятный компьютеру. Хороший программист пишет код, понятный людям\" — Мартин Фаулер"
+          )
+          echo "  ${QUOTES[$RANDOM % ${#QUOTES[@]}]}"
+          echo ""
+
+  daily-tip:
+    name: 💡 Совет дня
+    runs-on: ubuntu-latest
+    needs: greet
+    steps:
+      - name: 💡 Случайный Java-совет
+        run: |
+          TIPS=(
+            "💡 Используй final для переменных, которые не должны меняться — компилятор скажет спасибо!"
+            "💡 String'и в Java неизменяемы. Если конкатенируешь много — используй StringBuilder!"
+            "💡 == сравнивает ссылки, .equals() сравнивает содержимое. Не путай!"
+            "💡 ArrayList vs LinkedList: ArrayList быстрее для чтения, LinkedList — для вставки в середину"
+            "💡 Не лови Exception целиком — лови конкретные типы, чтобы знать что именно сломалось"
+            "💡 Optional<T> вместо null — спасёт от NullPointerException 🙏"
+            "💡 Stream API превращает циклы в красивые однострочники: list.stream().filter(...).map(...)"
+            "💡 var в Java 10+ выводит тип автоматически: var list = new ArrayList<String>();"
+            "💡 try-with-resources автоматически закрывает ресурсы — забудь про finally { close(); }"
+            "💡 Используй @Override — компилятор проверит, что ты реально переопределяешь метод"
+            "💡 Record (Java 14+) — это мини-класс для данных в одну строчку!"
+            "💡 Не сравнивай числа через ==, если они Integer (Boxed). Используй .equals()"
+          )
+          echo ""
+          echo "  ╭─────────────  Java-совет дня  ─────────────╮"
+          echo ""
+          echo "  ${TIPS[$RANDOM % ${#TIPS[@]}]}"
+          echo ""
+          echo "  ╰─────────────────────────────────────────────╯"
+          echo ""
+
+  build:
+    name: 🔨 Сборка проекта
+    runs-on: ubuntu-latest
+    needs: greet
+    steps:
+      - name: 📥 Клонируем репозиторий
+        uses: actions/checkout@v4
+
+      - name: ☕ Настраиваем JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: 🏗️ Компилируем (поехали!)
+        run: |
+          echo "::group::🔨 Запускаем компиляцию"
+          echo "    .---."
+          echo "   /     \\"
+          echo "   \\.@-@./"
+          echo "   /\`\\_/\`\\"
+          echo "  //  _  \\\\"
+          echo " | \\     )|_"
+          echo "/\`\\_\`>  <_/ \\"
+          echo "\\__/'---'\\__/"
+          echo ""
+          echo "Бобёр-компилятор за работой..."
+          mvn -B compile
+          echo "::endgroup::"
+
+      - name: ✅ Успех сборки
+        if: success()
+        run: |
+          echo "  ✨✨✨ СБОРКА УСПЕШНА! ✨✨✨"
+          echo ""
+          echo "      \\(^o^)/"
+          echo "       |  |"
+          echo "      _/  \\_"
+
+      - name: 💀 Сборка упала
+        if: failure()
+        run: |
+          echo "  ☠️  СБОРКА УПАЛА  ☠️"
+          echo ""
+          echo "      (╯°□°）╯︵ ┻━┻"
+          echo ""
+          echo "  Не переживай, у всех бывает. Проверь логи выше ☝️"
+
+  test:
+    name: 🧪 Тестирование
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: 📥 Клонируем код
+        uses: actions/checkout@v4
+
+      - name: ☕ Настраиваем Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: 🧪 Гоняем тесты
+        run: |
+          echo "::group::🔬 Запуск тестов"
+          echo "  🧪 Учёный надевает халат..."
+          echo "  🥽 Защитные очки... есть!"
+          echo "  ⚗️  Колбочки... есть!"
+          echo ""
+          mvn -B test
+          echo "::endgroup::"
+
+      - name: 🎉 Все тесты прошли
+        if: success()
+        run: |
+          echo "  🎊🎊🎊 ВСЕ ТЕСТЫ ЗЕЛЁНЫЕ! 🎊🎊🎊"
+          echo ""
+          echo "       🟢 🟢 🟢"
+          echo "       🟢 🟢 🟢"
+          echo "       🟢 🟢 🟢"
+          echo ""
+          echo "  Код работает! Можно гордиться 😎"
+
+      - name: 😱 Тесты упали
+        if: failure()
+        run: |
+          echo "  🔴 ТЕСТЫ УПАЛИ 🔴"
+          echo ""
+          echo "       (ಥ﹏ಥ)"
+          echo ""
+          echo "  Подсказка: посмотри что ожидалось, что получилось,"
+          echo "  и где именно сломалось 🔍"
+
+  code-style:
+    name: 🎨 Стиль кода
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: 📥 Клонируем код
+        uses: actions/checkout@v4
+
+      - name: ☕ Настраиваем Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: 🕵️ Проверяем стиль кода (Checkstyle)
+        continue-on-error: true
+        run: |
+          echo "::group::🎨 Проверка стиля"
+          echo "  🕵️ Шерлок Холмс осматривает код..."
+          echo "  🔍 \"Элементарно, Ватсон!\""
+          echo ""
+          mvn -B checkstyle:check || echo "  ⚠️  Есть замечания по стилю, но это не страшно"
+          echo "::endgroup::"
+
+  commit-judge:
+    name: 👨‍⚖️ Суд над коммитом
+    runs-on: ubuntu-latest
+    needs: greet
+    steps:
+      - name: 📥 Клонируем код
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: ⚖️ Оцениваем commit message
+        run: |
+          echo ""
+          echo "  ⚖️  ─── СУД  НАД  КОММИТОМ ─── ⚖️"
+          echo ""
+          COMMIT_MSG=$(git log -1 --pretty=format:"%s")
+          MSG_LEN=$(echo -n "$COMMIT_MSG" | wc -c)
+          echo "  📝 Подсудимое сообщение: \"$COMMIT_MSG\""
+          echo "  📏 Длина: $MSG_LEN символов"
+          echo ""
+          
+          VERDICT=""
+          SCORE=10
+          
+          # Слишком короткий
+          if [ "$MSG_LEN" -lt 5 ]; then
+            VERDICT="🚨 Очень коротко! Что ты вообще сделал?"
+            SCORE=2
+          # Бесполезные сообщения
+          elif [[ "$COMMIT_MSG" =~ ^(fix|update|wip|asdf|qwerty|test|тест|.|..|...)$ ]]; then
+            VERDICT="😏 Знаменитый \"fix\". Все мы тебя знаем."
+            SCORE=3
+          # Только эмодзи
+          elif ! echo "$COMMIT_MSG" | grep -q '[a-zA-Zа-яА-Я]'; then
+            VERDICT="🎭 Эмодзи вместо слов? Креативно, но непонятно!"
+            SCORE=5
+          # Хорошие commit messages
+          elif [[ "$COMMIT_MSG" =~ ^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?:.+ ]]; then
+            VERDICT="🏆 Conventional Commits! Профи в зале!"
+            SCORE=10
+          elif [ "$MSG_LEN" -gt 50 ]; then
+            VERDICT="📖 Подробно и информативно. Уважение!"
+            SCORE=9
+          elif [ "$MSG_LEN" -gt 20 ]; then
+            VERDICT="✅ Нормальное сообщение, понятно что сделал"
+            SCORE=8
+          else
+            VERDICT="🤷 Сойдёт, но можно было лучше"
+            SCORE=6
+          fi
+          
+          echo "  🎯 Вердикт: $VERDICT"
+          echo "  ⭐ Оценка: $SCORE / 10"
+          echo ""
+          
+          # Шкала
+          BAR=""
+          for i in $(seq 1 $SCORE); do BAR="${BAR}█"; done
+          for i in $(seq $((SCORE+1)) 10); do BAR="${BAR}░"; done
+          echo "  [$BAR]"
+          echo ""
+
+  stats:
+    name: 📊 Статистика кода
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: 📥 Клонируем код
+        uses: actions/checkout@v4
+
+      - name: 📊 Считаем строки кода
+        run: |
+          echo "  📊  С Т А Т И С Т И К А  📊"
+          echo "  ════════════════════════════"
+          JAVA_FILES=$(find src -name "*.java" 2>/dev/null | wc -l)
+          JAVA_LINES=$(find src -name "*.java" -exec cat {} \; 2>/dev/null | wc -l)
+          TODO_COUNT=$(grep -r "TODO" src 2>/dev/null | wc -l || echo "0")
+          FIXME_COUNT=$(grep -r "FIXME" src 2>/dev/null | wc -l || echo "0")
+          SYSO_COUNT=$(grep -r "System.out.println" src 2>/dev/null | wc -l || echo "0")
+          
+          echo "  📄 Java-файлов:     $JAVA_FILES"
+          echo "  📏 Строк кода:      $JAVA_LINES"
+          echo "  📝 TODO в коде:     $TODO_COUNT"
+          echo "  🚨 FIXME в коде:    $FIXME_COUNT"
+          echo "  🖨️  System.out:      $SYSO_COUNT"
+          echo ""
+          
+          if [ "$TODO_COUNT" -gt 5 ]; then
+            echo "  ⚠️  Многовато TODO! Не откладывай на потом 😉"
+          fi
+          
+          if [ "$SYSO_COUNT" -gt 10 ]; then
+            echo "  🖨️  Многовато System.out! Может пора освоить логгер? 😏"
+          fi
+          
+          if [ "$JAVA_LINES" -lt 100 ]; then
+            echo "  🌱 Проект ещё совсем юный — расти и развивайся!"
+          elif [ "$JAVA_LINES" -lt 500 ]; then
+            echo "  🌿 Уже что-то! Так держать!"
+          else
+            echo "  🌳 Серьёзный проект! Уважаем 🤝"
+          fi
+
+  achievements:
+    name: 🏆 Достижения
+    runs-on: ubuntu-latest
+    needs: [build, test]
+    if: success()
+    steps:
+      - name: 📥 Клонируем код
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 🏆 Выдаём ачивки
+        run: |
+          echo ""
+          echo "  🏆🏆🏆 А Ч И В К И  Р А З Б Л О К И Р О В А Н Ы 🏆🏆🏆"
+          echo ""
+          
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          echo "  📜 Всего коммитов в проекте: $COMMIT_COUNT"
+          echo ""
+          
+          if [ "$COMMIT_COUNT" -eq 1 ]; then
+            echo "  🥇 [НОВИЧОК] Первый коммит!"
+          elif [ "$COMMIT_COUNT" -ge 10 ]; then
+            echo "  🥇 [НАСТОЙЧИВЫЙ] 10+ коммитов!"
+          fi
+          
+          if [ "$COMMIT_COUNT" -ge 50 ]; then
+            echo "  🥈 [МАРАФОНЕЦ] 50+ коммитов!"
+          fi
+          
+          if [ "$COMMIT_COUNT" -ge 100 ]; then
+            echo "  🥉 [ЛЕГЕНДА] 100+ коммитов!"
+          fi
+          
+          # Коммит в выходные
+          DAY_OF_WEEK=$(date +%u)
+          if [ "$DAY_OF_WEEK" -ge 6 ]; then
+            echo "  🎖️  [НЕТ ВЫХОДНЫХ] Кодишь в выходные!"
+          fi
+          
+          # Поздний коммит
+          HOUR=$(date +%H)
+          if [ "$HOUR" -ge 22 ] || [ "$HOUR" -le 5 ]; then
+            echo "  🦉 [НОЧНАЯ СОВА] Кодишь по ночам!"
+          fi
+          
+          # Коммит в пятницу вечером — опасное время для деплоя!
+          if [ "$DAY_OF_WEEK" -eq 5 ] && [ "$HOUR" -ge 17 ]; then
+            echo "  ⚠️  [СМЕЛЬЧАК] Коммит в пятницу вечером! Удачи на выходных 😅"
+          fi
+          
+          # Первый коммит дня
+          TODAY_COMMITS=$(git log --since="midnight" --oneline 2>/dev/null | wc -l)
+          if [ "$TODAY_COMMITS" -eq 1 ]; then
+            echo "  ☀️  [РАННЯЯ ПТАШКА] Первый коммит сегодня!"
+          elif [ "$TODAY_COMMITS" -ge 10 ]; then
+            echo "  🔥 [ОГОНЬ] $TODAY_COMMITS коммитов за день!"
+          fi
+          
+          # Размер коммита
+          ADDED_LINES=$(git diff HEAD~1 HEAD --shortstat 2>/dev/null | grep -oE '[0-9]+ insertion' | grep -oE '[0-9]+' || echo "0")
+          if [ "$ADDED_LINES" -gt 500 ]; then
+            echo "  💪 [БОЛЬШОЙ КОММИТ] $ADDED_LINES строк добавлено!"
+          elif [ "$ADDED_LINES" -gt 0 ] && [ "$ADDED_LINES" -lt 5 ]; then
+            echo "  🎯 [ТОЧЕЧНЫЙ УДАР] Маленький, но важный коммит!"
+          fi
+          
+          echo ""
+          echo "  Продолжай в том же духе! 🚀"
+
+  motivation:
+    name: 🌟 Заряд мотивации
+    runs-on: ubuntu-latest
+    needs: [test]
+    if: always()
+    steps:
+      - name: 🌟 Мотивашка
+        run: |
+          if [ "${{ needs.test.result }}" == "success" ]; then
+            MOTIVATIONS=(
+              "🚀 Ты сегодня сделал шаг вперёд. Завтра будет ещё лучше!"
+              "💪 Каждая строчка кода делает тебя сильнее как разработчика"
+              "🌟 Помни: даже сеньоры когда-то писали свой первый Hello World"
+              "🎯 Главное — не останавливаться. Прогресс важнее совершенства"
+              "🧠 Сегодняшний код — это инвестиция в будущего себя"
+              "☕ Кофе + код + упорство = успех"
+            )
+          else
+            MOTIVATIONS=(
+              "💭 Ошибки — это не провал, это уроки. Разберись и иди дальше!"
+              "🛠️ Даже Линус Торвальдс ломает билды. Ты в хорошей компании"
+              "📚 Каждая ошибка — это +1 к опыту. Скоро Level Up!"
+              "🌱 Падают только те, кто идёт. Молодец, что пробуешь!"
+              "🔍 Сейчас разберёшься — в следующий раз будет проще"
+            )
+          fi
+          echo ""
+          echo "  ${MOTIVATIONS[$RANDOM % ${#MOTIVATIONS[@]}]}"
+          echo ""
+
+  finale:
+    name: 🎬 Финал
+    runs-on: ubuntu-latest
+    needs: [build, test, code-style, stats, achievements, motivation, commit-judge, daily-tip]
+    if: always()
+    steps:
+      - name: 🎬 Заключительный экран
+        run: |
+          echo ""
+          echo "  ╔══════════════════════════════════════════════════════╗"
+          echo "  ║                                                      ║"
+          echo "  ║              🎬  C I   З А К О Н Ч Е Н  🎬           ║"
+          echo "  ║                                                      ║"
+          echo "  ║         Спасибо за коммит, продолжай учиться!        ║"
+          echo "  ║                                                      ║"
+          echo "  ║                  ☕ Java forever ☕                  ║"
+          echo "  ║                                                      ║"
+          echo "  ╚══════════════════════════════════════════════════════╝"
+          echo ""
+          echo "        ___________"
+          echo "       |  ___      |"
+          echo "       | |   |     |"
+          echo "       | |   |  ___|"
+          echo "       | |___| |   |"
+          echo "       |_______|___|"
+          echo "            J A V A"
+          echo ""
