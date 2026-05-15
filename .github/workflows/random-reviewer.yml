@@ -1,0 +1,105 @@
+name: 🎲 Рандомный ревьюер
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+
+permissions:
+  pull-requests: write
+  issues: write
+
+jobs:
+  assign-reviewer:
+    name: 🎰 Выбираем счастливчика
+    runs-on: ubuntu-latest
+    # Не назначаем ревьюера если PR открыл сам ревьюер (бывает)
+    if: github.event.pull_request.draft == false
+    steps:
+      - name: 🎲 Бросаем кубик
+        id: roll
+        env:
+          # ⚠️ Здесь вписаны GitHub-юзернеймы ревьюеров (учителей)
+          REVIEWERS: "marsel-mkh gulnaz21"
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          # Превращаем строку в массив
+          read -ra ALL_REVIEWERS <<< "$REVIEWERS"
+          
+          # Убираем автора PR из списка (нельзя ревьюить самому себя)
+          CANDIDATES=()
+          for r in "${ALL_REVIEWERS[@]}"; do
+            if [ "$r" != "$PR_AUTHOR" ]; then
+              CANDIDATES+=("$r")
+            fi
+          done
+          
+          # Если не осталось кандидатов — выходим
+          if [ ${#CANDIDATES[@]} -eq 0 ]; then
+            echo "Нет доступных ревьюеров (автор PR — единственный в списке)"
+            echo "reviewer=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Рандомно выбираем одного
+          CHOSEN="${CANDIDATES[$RANDOM % ${#CANDIDATES[@]}]}"
+          echo "🎯 Выпал: $CHOSEN"
+          echo "reviewer=$CHOSEN" >> $GITHUB_OUTPUT
+
+      - name: 👤 Назначаем ревьюера
+        if: steps.roll.outputs.reviewer != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api \
+            --method POST \
+            -H "Accept: application/vnd.github+json" \
+            /repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/requested_reviewers \
+            -f "reviewers[]=${{ steps.roll.outputs.reviewer }}" || echo "Не удалось назначить (может, уже назначен)"
+
+      - name: 💬 Оставляем прикольный коммент
+        if: steps.roll.outputs.reviewer != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REVIEWER: ${{ steps.roll.outputs.reviewer }}
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+        run: |
+          # Рандомные приветственные фразы
+          PHRASES=(
+            "🎰 Барабан судьбы крутанулся... сегодня восхищаться твоим кодом будет **@$REVIEWER**!"
+            "🎲 Кубик упал! **@$REVIEWER**, твой выход — впереди увлекательное чтиво от @$AUTHOR"
+            "✨ Звёзды сошлись! Ревью этого PR доверено **@$REVIEWER** 🔮"
+            "🎯 Сегодня в роли строгого, но справедливого ревьюера — **@$REVIEWER**!"
+            "🍀 Лотерея закончилась! Победитель (или жертва?) — **@$REVIEWER**"
+            "🎪 Дамы и господа! На арене ревью PR'а — **@$REVIEWER**! 🎭"
+            "☕ **@$REVIEWER**, налей кофе — пришла твоя очередь читать код @$AUTHOR"
+            "🔍 Шерлок Холмс выбрал тебя, **@$REVIEWER** — изучи это дело внимательно!"
+            "🎓 **@$REVIEWER**, сегодня ты в роли профессора. Студент @$AUTHOR ждёт оценку!"
+            "🐉 Кто бросит вызов коду @$AUTHOR? **@$REVIEWER**, ты избран(а)! ⚔️"
+            "🪄 *Магическая шляпа задумалась...* и выбрала **@$REVIEWER**!"
+            "🎁 **@$REVIEWER**, держи подарок — свеженький PR на ревью 🎀"
+          )
+          
+          # Рандомные «задания» ревьюеру для разнообразия
+          TASKS=(
+            ""
+            "💡 Не забудь похвалить хоть за что-то — мотивация важна!"
+            "🧐 Совет дня: проверь, не забыл ли автор обработать null'ы"
+            "🔍 Обрати внимание на названия переменных — они говорят сами за себя"
+            "📚 Если найдёшь возможность научить чему-то новому — это бесценно!"
+            "☕ Бонус-задание: оставь хотя бы один комментарий со смайликом"
+            "🎯 Совет: сначала прочитай весь diff, потом начинай комментировать"
+            "🤔 Спроси себя: 'А я бы написал так же?' — и поделись мыслями"
+          )
+          
+          PHRASE="${PHRASES[$RANDOM % ${#PHRASES[@]}]}"
+          TASK="${TASKS[$RANDOM % ${#TASKS[@]}]}"
+          
+          BODY="$PHRASE"
+          if [ -n "$TASK" ]; then
+            SEPARATOR=$'\n\n━━━━━━━━━━━━━━━━━━━━━━\n\n'
+            BODY="${BODY}${SEPARATOR}${TASK}"
+          fi
+          
+          gh pr comment ${{ github.event.pull_request.number }} \
+            --repo ${{ github.repository }} \
+            --body "$BODY"

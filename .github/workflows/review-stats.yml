@@ -1,0 +1,242 @@
+name: 📊 Статистика ревью
+
+on:
+  schedule:
+    # 1-го числа каждого месяца в 10:00 UTC (13:00 МСК)
+    - cron: '0 10 1 * *'
+  # Можно запустить вручную из вкладки Actions
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  pull-requests: read
+
+jobs:
+  monthly-stats:
+    name: 🏆 Подводим итоги месяца
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📅 Считаем период
+        id: period
+        run: |
+          # Берём прошлый месяц
+          LAST_MONTH=$(date -d "$(date +%Y-%m-01) -1 day" +%Y-%m)
+          START_DATE=$(date -d "$(date +%Y-%m-01) -1 month" +%Y-%m-%d)
+          END_DATE=$(date -d "$(date +%Y-%m-01) -1 day" +%Y-%m-%d)
+          MONTH_NAME=$(date -d "$(date +%Y-%m-01) -1 month" +%B)
+          MONTH_YEAR=$(date -d "$(date +%Y-%m-01) -1 month" +"%B %Y")
+          
+          # Русские названия месяцев
+          declare -A RU_MONTHS=(
+            ["January"]="январь" ["February"]="февраль" ["March"]="март"
+            ["April"]="апрель" ["May"]="май" ["June"]="июнь"
+            ["July"]="июль" ["August"]="август" ["September"]="сентябрь"
+            ["October"]="октябрь" ["November"]="ноябрь" ["December"]="декабрь"
+          )
+          RU_MONTH="${RU_MONTHS[$MONTH_NAME]}"
+          YEAR=$(date -d "$(date +%Y-%m-01) -1 month" +%Y)
+          
+          echo "start=$START_DATE" >> $GITHUB_OUTPUT
+          echo "end=$END_DATE" >> $GITHUB_OUTPUT
+          echo "month=$LAST_MONTH" >> $GITHUB_OUTPUT
+          echo "ru_month=$RU_MONTH" >> $GITHUB_OUTPUT
+          echo "year=$YEAR" >> $GITHUB_OUTPUT
+          
+          echo "📅 Считаем за: $START_DATE — $END_DATE ($RU_MONTH $YEAR)"
+
+      - name: 🔍 Собираем статистику
+        id: stats
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          START_DATE: ${{ steps.period.outputs.start }}
+          END_DATE: ${{ steps.period.outputs.end }}
+        run: |
+          REPO="${{ github.repository }}"
+          
+          # Получаем все ревью за период через GitHub API
+          # Сначала находим все PR'ы созданные/обновлённые в период
+          echo "🔍 Ищем PR'ы за период..."
+          
+          # Берём все закрытые и открытые PR обновлённые в прошлом месяце
+          PR_NUMBERS=$(gh pr list \
+            --repo "$REPO" \
+            --state all \
+            --limit 200 \
+            --json number,createdAt,updatedAt \
+            --jq ".[] | select(.updatedAt >= \"${START_DATE}T00:00:00Z\" and .updatedAt <= \"${END_DATE}T23:59:59Z\") | .number")
+          
+          if [ -z "$PR_NUMBERS" ]; then
+            echo "Нет PR'ов за период"
+            echo "has_data=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          # Собираем статистику в файлик: ник|количество_ревью|количество_апрувов|количество_комментов
+          declare -A REVIEW_COUNT
+          declare -A APPROVE_COUNT
+          declare -A COMMENT_COUNT
+          declare -A CHANGES_REQUESTED_COUNT
+          TOTAL_PRS=0
+          
+          for PR in $PR_NUMBERS; do
+            TOTAL_PRS=$((TOTAL_PRS + 1))
+            echo "  📄 Обрабатываем PR #$PR"
+            
+            # Получаем все ревью этого PR
+            REVIEWS=$(gh api "/repos/$REPO/pulls/$PR/reviews" --jq '.[] | "\(.user.login)|\(.state)|\(.submitted_at)"' 2>/dev/null || echo "")
+            
+            while IFS='|' read -r USER STATE SUBMITTED; do
+              # Пропускаем пустые и боты
+              [ -z "$USER" ] && continue
+              [[ "$USER" == *"[bot]" ]] && continue
+              
+              # Проверяем что ревью в нашем периоде
+              REVIEW_DATE=$(echo "$SUBMITTED" | cut -d'T' -f1)
+              if [[ "$REVIEW_DATE" < "$START_DATE" || "$REVIEW_DATE" > "$END_DATE" ]]; then
+                continue
+              fi
+              
+              REVIEW_COUNT[$USER]=$((${REVIEW_COUNT[$USER]:-0} + 1))
+              
+              case "$STATE" in
+                APPROVED)
+                  APPROVE_COUNT[$USER]=$((${APPROVE_COUNT[$USER]:-0} + 1))
+                  ;;
+                CHANGES_REQUESTED)
+                  CHANGES_REQUESTED_COUNT[$USER]=$((${CHANGES_REQUESTED_COUNT[$USER]:-0} + 1))
+                  ;;
+                COMMENTED)
+                  COMMENT_COUNT[$USER]=$((${COMMENT_COUNT[$USER]:-0} + 1))
+                  ;;
+              esac
+            done <<< "$REVIEWS"
+          done
+          
+          # Сохраняем во временный файл (отсортированный по количеству ревью)
+          STATS_FILE="/tmp/stats.txt"
+          > "$STATS_FILE"
+          
+          for USER in "${!REVIEW_COUNT[@]}"; do
+            echo "${REVIEW_COUNT[$USER]}|$USER|${APPROVE_COUNT[$USER]:-0}|${CHANGES_REQUESTED_COUNT[$USER]:-0}|${COMMENT_COUNT[$USER]:-0}" >> "$STATS_FILE"
+          done
+          
+          # Сортируем по убыванию количества ревью
+          sort -t'|' -k1 -rn "$STATS_FILE" -o "$STATS_FILE"
+          
+          # Сохраняем для следующего шага
+          cp "$STATS_FILE" stats.txt
+          echo "total_prs=$TOTAL_PRS" >> $GITHUB_OUTPUT
+          echo "has_data=true" >> $GITHUB_OUTPUT
+          
+          echo "📊 Собрано данных:"
+          cat "$STATS_FILE"
+
+      - name: 📝 Создаём отчёт
+        if: steps.stats.outputs.has_data == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RU_MONTH: ${{ steps.period.outputs.ru_month }}
+          YEAR: ${{ steps.period.outputs.year }}
+          TOTAL_PRS: ${{ steps.stats.outputs.total_prs }}
+        run: |
+          # Эмодзи для мест
+          MEDALS=("🥇" "🥈" "🥉")
+          
+          # Считаем общее число ревьюеров и ревью
+          TOTAL_REVIEWERS=$(wc -l < stats.txt | tr -d ' ')
+          TOTAL_REVIEWS=$(awk -F'|' '{sum += $1} END {print sum}' stats.txt)
+          
+          # Строим тело Issue
+          {
+            echo "## 🏆 Итоги $RU_MONTH $YEAR"
+            echo ""
+            echo "Месяц позади, пора подводить итоги! 🎉"
+            echo ""
+            echo "### 📊 Общая картина"
+            echo ""
+            echo "- 📄 Обработано PR'ов: **$TOTAL_PRS**"
+            echo "- 💬 Всего ревью: **$TOTAL_REVIEWS**"
+            echo "- 👥 Активных ревьюеров: **$TOTAL_REVIEWERS**"
+            echo ""
+            echo "### 🎖️ Топ ревьюеров"
+            echo ""
+            echo "| Место | Ревьюер | Всего | ✅ Approve | 🔄 Changes | 💬 Comment |"
+            echo "|:-:|:--|:-:|:-:|:-:|:-:|"
+            
+            INDEX=0
+            while IFS='|' read -r COUNT USER APPROVES CHANGES COMMENTS; do
+              if [ $INDEX -lt 3 ]; then
+                MEDAL="${MEDALS[$INDEX]}"
+              else
+                MEDAL="$((INDEX + 1))"
+              fi
+              echo "| $MEDAL | @$USER | **$COUNT** | $APPROVES | $CHANGES | $COMMENTS |"
+              INDEX=$((INDEX + 1))
+            done < stats.txt
+            
+            echo ""
+            echo "### 🏅 Звания месяца"
+            echo ""
+            
+            # Король ревью — больше всех ревью
+            TOP_REVIEWER=$(head -1 stats.txt | cut -d'|' -f2)
+            TOP_COUNT=$(head -1 stats.txt | cut -d'|' -f1)
+            echo "- 👑 **Король ревью**: @$TOP_REVIEWER ($TOP_COUNT ревью)"
+            
+            # Самый щедрый — больше всех approve
+            BEST_APPROVER=$(awk -F'|' '{print $3"|"$2}' stats.txt | sort -rn | head -1 | cut -d'|' -f2)
+            BEST_APPROVES=$(awk -F'|' '{print $3"|"$2}' stats.txt | sort -rn | head -1 | cut -d'|' -f1)
+            if [ "$BEST_APPROVES" -gt 0 ]; then
+              echo "- 🌟 **Самый добрый ревьюер**: @$BEST_APPROVER ($BEST_APPROVES апрувов)"
+            fi
+            
+            # Самый строгий — больше всех changes requested
+            STRICT_REVIEWER=$(awk -F'|' '{print $4"|"$2}' stats.txt | sort -rn | head -1 | cut -d'|' -f2)
+            STRICT_COUNT=$(awk -F'|' '{print $4"|"$2}' stats.txt | sort -rn | head -1 | cut -d'|' -f1)
+            if [ "$STRICT_COUNT" -gt 0 ]; then
+              echo "- 🔍 **Самый придирчивый**: @$STRICT_REVIEWER ($STRICT_COUNT changes requested)"
+            fi
+            
+            # Болтун — больше всех комментов
+            CHATTY_REVIEWER=$(awk -F'|' '{print $5"|"$2}' stats.txt | sort -rn | head -1 | cut -d'|' -f2)
+            CHATTY_COUNT=$(awk -F'|' '{print $5"|"$2}' stats.txt | sort -rn | head -1 | cut -d'|' -f1)
+            if [ "$CHATTY_COUNT" -gt 0 ]; then
+              echo "- 💬 **Самый разговорчивый**: @$CHATTY_REVIEWER ($CHATTY_COUNT комментов)"
+            fi
+            
+            echo ""
+            echo "### 💪 Мотивашка"
+            echo ""
+            MOTIVATIONS=(
+              "Каждое ревью — это вклад в чужой рост. Спасибо! 🙏"
+              "Хороший ревьюер ценится на вес золота. Вы — золотой фонд! 🏆"
+              "За каждым отличным разработчиком стоит отличный ревьюер 💎"
+              "Ревью — это не критика, это забота о коде и людях ❤️"
+              "Чем больше ревью — тем меньше багов в продакшене 🐛"
+            )
+            echo "> ${MOTIVATIONS[$RANDOM % ${#MOTIVATIONS[@]}]}"
+            echo ""
+            echo "---"
+            echo "*🤖 Отчёт сгенерирован автоматически. Поехали в новый месяц! 🚀*"
+          } > issue_body.md
+          
+          # Показываем что получилось
+          echo "=== Содержимое отчёта ==="
+          cat issue_body.md
+          echo "========================="
+          
+          # Создаём Issue
+          TITLE="📊 Статистика ревью за $RU_MONTH $YEAR"
+          gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "$TITLE" \
+            --body-file issue_body.md \
+            --label "stats" 2>&1 || gh issue create \
+            --repo "${{ github.repository }}" \
+            --title "$TITLE" \
+            --body-file issue_body.md
+
+      - name: 🤷 Нет данных
+        if: steps.stats.outputs.has_data == 'false'
+        run: |
+          echo "За прошлый месяц не было ревью. Issue не создаём."
