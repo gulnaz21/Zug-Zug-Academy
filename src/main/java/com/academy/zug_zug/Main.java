@@ -3,7 +3,6 @@ import java.util.*;
 
 class Animal{
     private int i;
-    public
 }
 
 class Mouse extends Animal{
