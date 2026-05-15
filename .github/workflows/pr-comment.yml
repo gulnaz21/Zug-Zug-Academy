@@ -1,0 +1,267 @@
+name: 💬 Комментарий в PR
+
+on:
+  workflow_run:
+    workflows: ["🚀 Zug-Zug Academy CI"]
+    types: [completed]
+
+permissions:
+  pull-requests: write
+  contents: read
+  actions: read
+
+jobs:
+  comment:
+    name: 📝 Пишем коммент в PR
+    runs-on: ubuntu-latest
+    # Запускаемся только если CI был на PR
+    if: github.event.workflow_run.event == 'pull_request'
+    steps:
+      - name: 🔍 Находим PR
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Получаем номер PR из workflow_run
+          HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+          HEAD_BRANCH="${{ github.event.workflow_run.head_branch }}"
+          
+          # Ищем открытый PR с этой веткой
+          PR_NUMBER=$(gh pr list \
+            --repo "${{ github.repository }}" \
+            --head "$HEAD_BRANCH" \
+            --state open \
+            --json number \
+            --jq '.[0].number')
+          
+          if [ -z "$PR_NUMBER" ] || [ "$PR_NUMBER" == "null" ]; then
+            echo "PR не найден для ветки $HEAD_BRANCH"
+            echo "found=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "Нашли PR #$PR_NUMBER"
+          echo "number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "found=true" >> $GITHUB_OUTPUT
+
+      - name: 📥 Клонируем код
+        if: steps.pr.outputs.found == 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - name: 🎨 Собираем коммент
+        if: steps.pr.outputs.found == 'true'
+        id: build
+        env:
+          CI_STATUS: ${{ github.event.workflow_run.conclusion }}
+          AUTHOR: ${{ github.event.workflow_run.actor.login }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          # === Цитаты ===
+          QUOTES=(
+            "💡 «Сначала заставь работать, потом сделай красиво» — Кент Бек"
+            "🧙 «Если код работает с первого раза — что-то не так» — народная мудрость"
+            "🔥 «Java — это C++ без острых краёв» — Джеймс Гослинг"
+            "🐛 «Это не баг, это фича» — каждый разработчик"
+            "🎯 «Преждевременная оптимизация — корень всех зол» — Кнут"
+            "🚀 «Хороший программист пишет код, понятный людям» — Мартин Фаулер"
+          )
+          QUOTE="${QUOTES[$RANDOM % ${#QUOTES[@]}]}"
+          
+          # === Совет дня ===
+          TIPS=(
+            "Используй \`final\` для переменных, которые не должны меняться"
+            "\`String\`'и в Java неизменяемы. Конкатенируешь много — используй \`StringBuilder\`"
+            "\`==\` сравнивает ссылки, \`.equals()\` — содержимое. Не путай!"
+            "\`Optional<T>\` вместо \`null\` спасёт от NullPointerException"
+            "Stream API: \`list.stream().filter(...).map(...)\` — красота!"
+            "\`var\` в Java 10+ выводит тип сам: \`var list = new ArrayList<String>();\`"
+            "try-with-resources автоматически закрывает ресурсы"
+            "Record (Java 14+) — это мини-класс для данных в одну строку"
+          )
+          TIP="${TIPS[$RANDOM % ${#TIPS[@]}]}"
+          
+          # === Суд над коммитом ===
+          COMMIT_MSG=$(git log -1 --pretty=format:"%s")
+          MSG_LEN=$(echo -n "$COMMIT_MSG" | wc -c)
+          
+          if [ "$MSG_LEN" -lt 5 ]; then
+            VERDICT="🚨 Очень коротко! Что ты вообще сделал?"
+            SCORE=2
+          elif [[ "$COMMIT_MSG" =~ ^(fix|update|wip|asdf|qwerty|test|тест|.|..|...)$ ]]; then
+            VERDICT="😏 Знаменитый «$COMMIT_MSG». Все мы тебя знаем."
+            SCORE=3
+          elif ! echo "$COMMIT_MSG" | grep -q '[a-zA-Zа-яА-Я]'; then
+            VERDICT="🎭 Эмодзи вместо слов? Креативно, но непонятно!"
+            SCORE=5
+          elif [[ "$COMMIT_MSG" =~ ^(feat|fix|docs|style|refactor|test|chore)(\(.+\))?:.+ ]]; then
+            VERDICT="🏆 Conventional Commits! Профи в зале!"
+            SCORE=10
+          elif [ "$MSG_LEN" -gt 50 ]; then
+            VERDICT="📖 Подробно и информативно. Уважение!"
+            SCORE=9
+          elif [ "$MSG_LEN" -gt 20 ]; then
+            VERDICT="✅ Нормальное сообщение, понятно что сделал"
+            SCORE=8
+          else
+            VERDICT="🤷 Сойдёт, но можно было лучше"
+            SCORE=6
+          fi
+          
+          # Шкала визуальная
+          BAR=""
+          for i in $(seq 1 $SCORE); do BAR="${BAR}█"; done
+          for i in $(seq $((SCORE+1)) 10); do BAR="${BAR}░"; done
+          
+          # === Статистика кода ===
+          JAVA_FILES=$(find src -name "*.java" 2>/dev/null | wc -l | tr -d ' ')
+          JAVA_LINES=$(find src -name "*.java" -exec cat {} \; 2>/dev/null | wc -l | tr -d ' ')
+          TODO_COUNT=$(grep -r "TODO" src 2>/dev/null | wc -l | tr -d ' ')
+          SYSO_COUNT=$(grep -r "System.out.println" src 2>/dev/null | wc -l | tr -d ' ')
+          
+          # === Ачивки ===
+          ACHIEVEMENTS=""
+          COMMIT_COUNT=$(git rev-list --count HEAD)
+          
+          if [ "$COMMIT_COUNT" -eq 1 ]; then
+            ACHIEVEMENTS="${ACHIEVEMENTS}- 🥇 **[НОВИЧОК]** Первый коммит!\n"
+          elif [ "$COMMIT_COUNT" -ge 100 ]; then
+            ACHIEVEMENTS="${ACHIEVEMENTS}- 🥉 **[ЛЕГЕНДА]** 100+ коммитов!\n"
+          elif [ "$COMMIT_COUNT" -ge 50 ]; then
+            ACHIEVEMENTS="${ACHIEVEMENTS}- 🥈 **[МАРАФОНЕЦ]** 50+ коммитов!\n"
+          elif [ "$COMMIT_COUNT" -ge 10 ]; then
+            ACHIEVEMENTS="${ACHIEVEMENTS}- 🥇 **[НАСТОЙЧИВЫЙ]** 10+ коммитов!\n"
+          fi
+          
+          DAY_OF_WEEK=$(date +%u)
+          HOUR=$(date +%H)
+          
+          if [ "$DAY_OF_WEEK" -ge 6 ]; then
+            ACHIEVEMENTS="${ACHIEVEMENTS}- 🎖️ **[НЕТ ВЫХОДНЫХ]** Кодишь в выходные!\n"
+          fi
+          
+          if [ "$HOUR" -ge 22 ] || [ "$HOUR" -le 5 ]; then
+            ACHIEVEMENTS="${ACHIEVEMENTS}- 🦉 **[НОЧНАЯ СОВА]** Кодишь по ночам!\n"
+          fi
+          
+          if [ "$DAY_OF_WEEK" -eq 5 ] && [ "$HOUR" -ge 17 ]; then
+            ACHIEVEMENTS="${ACHIEVEMENTS}- ⚠️ **[СМЕЛЬЧАК]** Коммит в пятницу вечером!\n"
+          fi
+          
+          if [ -z "$ACHIEVEMENTS" ]; then
+            ACHIEVEMENTS="_В этот раз ачивок нет — но впереди ещё много возможностей!_"
+          fi
+          
+          # === Мотивашка ===
+          if [ "$CI_STATUS" == "success" ]; then
+            STATUS_HEADER="## ✨ Все проверки пройдены! ✨"
+            STATUS_REACTION=$'```\n      \\(^o^)/\n       |  |\n      _/  \\_\n```'
+            MOTIVATIONS=(
+              "🚀 Ты сегодня сделал шаг вперёд. Завтра будет ещё лучше!"
+              "💪 Каждая строчка кода делает тебя сильнее как разработчика"
+              "🌟 Помни: даже сеньоры когда-то писали свой первый Hello World"
+              "🎯 Главное — не останавливаться. Прогресс важнее совершенства"
+              "🧠 Сегодняшний код — это инвестиция в будущего себя"
+              "☕ Кофе + код + упорство = успех"
+            )
+          else
+            STATUS_HEADER="## 💀 Что-то пошло не так..."
+            STATUS_REACTION=$'```\n   (╯°□°）╯︵ ┻━┻\n```'
+            MOTIVATIONS=(
+              "💭 Ошибки — это не провал, это уроки. Разберись и иди дальше!"
+              "🛠️ Даже Линус Торвальдс ломает билды. Ты в хорошей компании"
+              "📚 Каждая ошибка — это +1 к опыту. Скоро Level Up!"
+              "🌱 Падают только те, кто идёт. Молодец, что пробуешь!"
+              "🔍 Сейчас разберёшься — в следующий раз будет проще"
+            )
+          fi
+          MOTIVATION="${MOTIVATIONS[$RANDOM % ${#MOTIVATIONS[@]}]}"
+          
+          # === Размер дерева кода ===
+          if [ "$JAVA_LINES" -lt 100 ]; then
+            CODE_SIZE_EMOJI="🌱 Юный проект"
+          elif [ "$JAVA_LINES" -lt 500 ]; then
+            CODE_SIZE_EMOJI="🌿 Растущий проект"
+          else
+            CODE_SIZE_EMOJI="🌳 Серьёзный проект"
+          fi
+          
+          # === Собираем коммент в файл ===
+          {
+            echo "$STATUS_HEADER"
+            echo ""
+            echo "$STATUS_REACTION"
+            echo ""
+            echo "> $QUOTE"
+            echo ""
+            echo "### 👨‍⚖️ Суд над коммитом"
+            echo ""
+            echo "**Сообщение:** \`$COMMIT_MSG\`"
+            echo ""
+            echo "$VERDICT"
+            echo ""
+            echo "**Оценка:** \`[$BAR] $SCORE / 10\`"
+            echo ""
+            echo "### 📊 Статистика кода"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| 📄 Java-файлов | **$JAVA_FILES** |"
+            echo "| 📏 Строк кода | **$JAVA_LINES** |"
+            echo "| 📝 TODO в коде | **$TODO_COUNT** |"
+            echo "| 🖨️ System.out | **$SYSO_COUNT** |"
+            echo "| 📜 Коммитов всего | **$COMMIT_COUNT** |"
+            echo ""
+            echo "$CODE_SIZE_EMOJI"
+            
+            if [ "$SYSO_COUNT" -gt 10 ]; then
+              echo ""
+              echo "> ⚠️ Многовато \`System.out.println\`! Может пора освоить логгер? 😏"
+            fi
+            
+            echo ""
+            echo "### 🏆 Ачивки"
+            echo ""
+            echo -e "$ACHIEVEMENTS"
+            echo ""
+            echo "### 💡 Совет дня"
+            echo ""
+            echo "$TIP"
+            echo ""
+            echo "### 🌟 Мотивашка"
+            echo ""
+            echo "> $MOTIVATION"
+            echo ""
+            echo "---"
+            echo "<sub>🤖 Zug-Zug Academy Bot • [Подробные логи CI]($RUN_URL)</sub>"
+            echo "<!-- zug-zug-bot-comment -->"
+          } > comment.md
+          
+          echo "=== Превью коммента ==="
+          cat comment.md
+
+      - name: 💬 Публикуем коммент в PR
+        if: steps.pr.outputs.found == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_NUMBER: ${{ steps.pr.outputs.number }}
+        run: |
+          # Ищем старый коммент бота по маркеру
+          OLD_COMMENT_ID=$(gh api "/repos/${{ github.repository }}/issues/$PR_NUMBER/comments" \
+            --jq '.[] | select(.body | contains("zug-zug-bot-comment")) | .id' \
+            | head -1)
+          
+          if [ -n "$OLD_COMMENT_ID" ]; then
+            echo "🔄 Обновляем старый коммент #$OLD_COMMENT_ID"
+            gh api \
+              --method PATCH \
+              "/repos/${{ github.repository }}/issues/comments/$OLD_COMMENT_ID" \
+              -f "body=$(cat comment.md)"
+          else
+            echo "✨ Создаём новый коммент"
+            gh pr comment "$PR_NUMBER" \
+              --repo "${{ github.repository }}" \
+              --body-file comment.md
+          fi
