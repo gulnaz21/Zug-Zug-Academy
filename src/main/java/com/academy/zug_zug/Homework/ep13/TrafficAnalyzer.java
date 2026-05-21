@@ -1,4 +1,4 @@
-package com.academy.zug_zug.Homework16;
+package com.academy.zug_zug.Homework.ep13;
 
 public class TrafficAnalyzer {
     int getMaxTraffic(int [] traffic){
