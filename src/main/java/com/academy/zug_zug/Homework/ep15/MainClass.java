@@ -1,12 +1,17 @@
 package com.academy.zug_zug.Homework.ep15;
 
-interface TestScenario {
-    void runTest();
-}
+import com.academy.zug_zug.Homework.ep15.TestClasses.LoginTest;
+import com.academy.zug_zug.Homework.ep15.TestClasses.PaymentTest;
+import com.academy.zug_zug.Homework.ep15.TestClasses.ProductSearchTest;
+import com.academy.zug_zug.Homework.ep15.TestClasses.TestScenario;
 
 public class MainClass {
     public static void main(String[] args) {
-        TestScenario[] objects = new TestScenario[]{new LoginTest(), new PaymentTest(), new ProductSearchTest()};
+        LoginTest loginTest = new LoginTest();
+        PaymentTest paymentTest = new PaymentTest();
+        ProductSearchTest productSearchTest = new ProductSearchTest();
+
+        TestScenario[] objects = new TestScenario[]{loginTest, paymentTest, productSearchTest};
         for (int i = 0; i <= objects.length - 1; i++)
             objects[i].runTest();
     }
