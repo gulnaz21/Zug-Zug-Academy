@@ -1,7 +1,12 @@
 package com.academy.zug_zug.Homework.ep23.DoubleLinkedList;
 
+import lombok.Getter;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
+
 import java.util.NoSuchElementException;
 
+@Slf4j
 public class DoubleLinkedList {
     private Node firstNode;
     private Node lastNode;
@@ -30,75 +35,90 @@ public class DoubleLinkedList {
         size++;
     }
 
-    public void add(int index, Object value) {
-        if (size == 0 && index == 0) {
-            Node node = new Node(value);
-            lastNode = node;
+    public Object add(int index, Object value) {
+        // Проверка диапазона индекса
+        try {
+            if (index < 0 || index > size) {
+                throw new InvalidInputException("Передаваемый индекс не входит в диапазон индексов листа");
+            }
+        } catch (InvalidInputException exception) {
+            return exception.toString();
+        }
+
+        Node node = new Node(value);
+
+        // Случай 1: список пуст
+        if (size == 0) {
             firstNode = node;
+            lastNode = node;
             node.nextNode = null;
             node.prevNode = null;
-            size++;
-        } else {
-            if (index >= 0 && index <= size - 1) {
-                Node node = new Node(value);
-                Node buf;
-                if (index == 0 && size == 1) {// Логика если добавляем в лист, где 1 нода
-                    buf = firstNode;
-                    firstNode = node;
-                    lastNode = buf;
-                    node.prevNode = null;
-                    node.nextNode = buf;
-                } else if (index == 0) { // Логика если добавляем в самое начало, где как минимум 2 ноды есть уже
-                    buf = firstNode;
-                    firstNode = node;
-                    node.prevNode = null;
-                    node.nextNode = buf;
-                    buf.prevNode = node; // Добавил, логика исправлена получается
-                } else if (index == size - 1) { // Логика если добавляем в самый конец
-                    buf = lastNode;
-                    lastNode = node;
-                    buf.nextNode = node;
-                    node.nextNode = null;
-                    node.prevNode = buf;
-                } else { //Логика, если добавляем в середину листа
-                    buf = firstNode;
-                    Node addingBuf;
-                    for (int i = 0; i < index; i++) {
-                        buf = buf.nextNode;
-                    }
-                    addingBuf = buf.prevNode;
-                    addingBuf.nextNode = node;
-                    node.nextNode = buf;
-                    node.prevNode = addingBuf;
-                }
-                size++;
-            } else {
-                System.out.println("ochepyatka");
-            }
         }
+        // Случай 2: добавление в начало
+        else if (index == 0) {
+            node.nextNode = firstNode;
+            node.prevNode = null;
+            firstNode.prevNode = node;
+            firstNode = node;
+        }
+        // Случай 3: добавление в конец
+        else if (index == size) {
+            node.prevNode = lastNode;
+            node.nextNode = null;
+            lastNode.nextNode = node;
+            lastNode = node;
+        }
+        // Случай 4: добавление в середину
+        else {
+            Node current;
+
+            // Оптимизация: идем с начала или с конца
+            if (index < size / 2) {
+                current = firstNode;
+                for (int i = 0; i < index; i++) {
+                    current = current.nextNode;
+                }
+            } else {
+                current = lastNode;
+                for (int i = size - 1; i > index; i--) {
+                    current = current.prevNode;
+                }
+            }
+
+            Node prevNode = current.prevNode;
+
+            node.nextNode = current;
+            node.prevNode = prevNode;
+            prevNode.nextNode = node;
+            current.prevNode = node;
+        }
+
+        size++;
+        return value;
     }
 
     public Object get(int index) {
         try {
             if (index >= 0 && index <= size - 1) {
+                Node buf;
                 if (size / 2 >= index) {
-                    Node buf = firstNode;
+                    buf = firstNode;
                     for (int i = 0; i < index; i++) {
                         buf = buf.nextNode;
                     }
-                    return buf.value;
                 } else {
-                    Node buf = lastNode;
+                    buf = lastNode;
                     for (int i = size - 1; i > index; i--) {
                         buf = buf.prevNode;
                     }
-                    return buf.value;
                 }
+                return buf.value;
             } else {
                 throw new NoSuchElementException("Nechego vidat tebe brat");
+                // log. не работает хз( повесли же аннотацию)
             }
         } catch (NoSuchElementException e) {
-            return null;
+            return e.toString();
         }
     }
 
@@ -128,10 +148,12 @@ public class DoubleLinkedList {
         return sb.toString();
     }
 
+    @Setter
+    @Getter
     private static class Node {
-        Node nextNode;
-        Node prevNode;
-        Object value;
+        private Node nextNode;
+        private Node prevNode;
+        private Object value;
 
         public Node(Object value) {
             this.value = value;

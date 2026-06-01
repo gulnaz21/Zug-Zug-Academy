@@ -17,13 +17,15 @@ public class RunningClass {
         singleLinkedList.add(0, SOME_VALUE_THIRD);
         System.out.println(singleLinkedList.get(0));
         System.out.println(singleLinkedList.size());
+        System.out.println(singleLinkedList.remove());
+        System.out.println(singleLinkedList.remove(0));
         System.out.println(singleLinkedList);
         System.out.println("_______________________________");
         System.out.println("___________DoubleNode__________");
         doubleLinkedList.add(SOME_VALUE_FIRST);
         doubleLinkedList.add(SOME_VALUE_SECOND);
-        doubleLinkedList.add(0, SOME_VALUE_THIRD);
-        System.out.println(doubleLinkedList.get(2));
+        doubleLinkedList.add(1, SOME_VALUE_THIRD);
+        System.out.println(doubleLinkedList.get(0));
         System.out.println(doubleLinkedList.size());
         System.out.println(doubleLinkedList);
         System.out.println("_______________________________");

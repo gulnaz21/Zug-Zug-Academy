@@ -1,6 +1,7 @@
 package com.academy.zug_zug.Homework.ep23.SingleLinkedList;
 
 import lombok.Getter;
+import lombok.Setter;
 
 import java.util.NoSuchElementException;
 
@@ -50,16 +51,18 @@ public class SingleLinkedList {
     }
 
     public Object get(int index) {
-        if (index >= 0 && index <= size - 1) {
-            Node buf = firstNode;
-            for (int i = 0; i < index; i++) {
-                buf = buf.nextNode;
+        try {
+            if (index >= 0 && index <= size - 1) {
+                Node buf = firstNode;
+                for (int i = 0; i < index; i++) {
+                    buf = buf.nextNode;
+                }
+                return buf.value;
             }
-            return buf.value;
-        } else {
-            System.out.println("Пока без троу, но индекс неверный");
-            return null;
+        } catch (IndexOutOfBoundsException exception) {
+            return exception.toString();
         }
+        return null;
     }
 
     public String remove(int index) {
@@ -90,7 +93,6 @@ public class SingleLinkedList {
                 s = (Integer) node.value;
                 assert prevNode != null;
                 prevNode.nextNode = node.nextNode;
-                node = null;
                 size--;
                 return String.valueOf(s);
             }
@@ -106,13 +108,11 @@ public class SingleLinkedList {
                 throw new NoSuchElementException("Нету элементов, что ты планируешь удалить то? Дядь");
             }
         } catch (NoSuchElementException exception) {
-            return "";
+            return exception.toString();
         }
         if (size == 1) {
-            Node buf = firstNode;
             int s = (Integer) firstNode.value;
             firstNode = null;
-            buf = null;
             size--;
             return String.valueOf(s);
         } else {
@@ -150,10 +150,11 @@ public class SingleLinkedList {
         return size;
     }
 
+    @Getter
+    @Setter
     private static class Node {
-        @Getter
-        Node nextNode;
-        Object value;
+        private Node nextNode;
+        private Object value;
 
         public Node(Object value) {
             this.value = value;
