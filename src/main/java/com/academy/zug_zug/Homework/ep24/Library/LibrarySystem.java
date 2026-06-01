@@ -4,32 +4,36 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class LibrarySystem {
-    private final HashMap<Book, String> library = new HashMap<>();
+    private final Map<Book, String> library;
 
-    public void addBook(String title, String author, int year, String location) {
-        library.put(new Book(title, author, year), location);
+    public LibrarySystem() {
+        library = new HashMap<>();
     }
 
-    public void removeBook(String title, String author, int year) {
-        library.remove(new Book(title, author, year));
+    public void addBook(Book book, String location) {
+        library.put(book, location);
     }
 
-    public void findBook(String title, String author, int year) {
-        String location = library.get(new Book(title, author, year));
-        if (location != null) {
-            System.out.println(location);
-        } else {
-            System.out.println("Указанная книга не найдена в библиотеке");
+    public void removeBook(Book book) {
+        if (findBook(book) != null) {
+            library.remove(book);
         }
+    }
 
+    public String findBook(Book book) {
+        String location = library.get(book);
+        if (book != null && location != null) {
+            return location;
+        } else {
+            return null;
+        }
     }
 
     public void printAllBooks() {
         for (Map.Entry<Book, String> entry : library.entrySet()) {
             Book book = entry.getKey();
             String value = entry.getValue();
-            // используем book и value
-            System.out.println("Название книги: " + book.getTitle() + " |Имя автора: " + book.getAuthor() + " |Год выпуска книги:" + book.getYear() + " Местоположение книги-> " + value);
+            System.out.println(book + " --> " + value);
         }
     }
 
