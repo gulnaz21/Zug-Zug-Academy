@@ -34,20 +34,13 @@ public class HogwartsSpells {
         return spellsByType.get(eventType);
     }
 
-    public void deleteSpellEvent(int id) throws IllegalArgumentException{
-        try {
-
-            if (spellById.containsKey(id)) {
-                String spellName = getSpellEventById(id).getEventType();
-                spellById.remove(id);
-                spellsByType.remove(spellName);
-            }
-            else{
-                throw new IllegalArgumentException("Передан неверный индекс(Ключ) к удалению");
-            }
-        }
-        catch (IllegalArgumentException exception){
-            System.out.println(exception);
+    public void deleteSpellEvent(int id) {
+        if (spellById.containsKey(id)) {
+            String spellName = getSpellEventById(id).getEventType();
+            spellById.remove(id);
+            spellsByType.remove(spellName);
+            ConstantContainer.setIdentifierOfSpellEvent(id);
+            ConstantContainer.setIdentifierOfSpell(id);
         }
     }
 
