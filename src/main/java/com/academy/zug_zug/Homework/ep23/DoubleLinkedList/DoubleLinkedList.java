@@ -2,11 +2,9 @@ package com.academy.zug_zug.Homework.ep23.DoubleLinkedList;
 
 import lombok.Getter;
 import lombok.Setter;
-import lombok.extern.slf4j.Slf4j;
 
 import java.util.NoSuchElementException;
 
-@Slf4j
 public class DoubleLinkedList {
     private Node firstNode;
     private Node lastNode;
