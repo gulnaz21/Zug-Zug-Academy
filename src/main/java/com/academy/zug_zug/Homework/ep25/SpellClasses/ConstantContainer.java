@@ -9,8 +9,8 @@ public class ConstantContainer {
     private final static HashSet<Integer> STORAGE_NUMBER_TWO = new HashSet<>();
 
     public static int getIdentifierOfSpell() {
-        int last_value = IDENTIFIER_OF_SPELL;
-        IDENTIFIER_OF_SPELL++;
+        int last_value = IDENTIFIER_OF_SPELL++;
+        //IDENTIFIER_OF_SPELL++;
         STORAGE_NUMBER_ONE.add(last_value);
         return last_value;
     }

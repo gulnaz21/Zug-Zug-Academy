@@ -2,11 +2,12 @@ package com.academy.zug_zug.Homework.ep25.SpellClasses;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class HogwartsSpells {
-    private final HashMap<Integer, SpellEvent> spellById;
-    private final HashMap<String, ArrayList<SpellEvent>> spellsByType;
+    private final Map<Integer, SpellEvent> spellById;
+    private final Map<String, List<SpellEvent>> spellsByType;
 
     public HogwartsSpells() {
         spellById = new HashMap<>();
@@ -14,15 +15,15 @@ public class HogwartsSpells {
     }
 
     public void addSpellEvent(String eventType, String actionDescription) {
-        ArrayList<SpellEvent> list = new ArrayList<>();
+        List<SpellEvent> SpellEventList = new ArrayList<>();
         SpellEvent spellEvent = new SpellEvent(ConstantContainer.getIdentifierOfSpell(), eventType, actionDescription);
         spellById.put(ConstantContainer.getIdentifierOfSpellEvent(), spellEvent);
         if (spellsByType.containsKey(eventType)) {
-            list = spellsByType.get(eventType);
-            list.add(spellEvent);
+            SpellEventList = spellsByType.get(eventType);
+            SpellEventList.add(spellEvent);
         } else {
-            list.add(spellEvent);
-            spellsByType.put(eventType, list);
+            SpellEventList.add(spellEvent);
+            spellsByType.put(eventType, SpellEventList);
         }
     }
 
@@ -30,7 +31,7 @@ public class HogwartsSpells {
         return spellById.get(id);
     }
 
-    public ArrayList<SpellEvent> getSpellEventsByType(String eventType) {
+    public List<SpellEvent> getSpellEventsByType(String eventType) {
         return spellsByType.get(eventType);
     }
 

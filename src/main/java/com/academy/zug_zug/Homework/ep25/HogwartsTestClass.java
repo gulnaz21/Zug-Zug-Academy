@@ -16,12 +16,28 @@ public class HogwartsTestClass {
     }
 
     private static HogwartsSpells getHogwartsSpells() {
+        HogwartsSpells hogwartsSpells = getSpells();
+        hogwartsSpells.deleteSpellEvent(ConstantContainer.getOneNumber());
+        hogwartsSpells.deleteSpellEvent(ConstantContainer.getOneNumber());
+        hogwartsSpells.deleteSpellEvent(ConstantContainer.getOneNumber());
+        hogwartsSpells.deleteSpellEvent(ConstantContainer.getOneNumber());
+        hogwartsSpells.deleteSpellEvent(ConstantContainer.getOneNumber());
+        hogwartsSpells.deleteSpellEvent(ConstantContainer.getOneNumber());
+        hogwartsSpells.deleteSpellEvent(ConstantContainer.getOneNumber());
+        return hogwartsSpells;
+    }
+
+    private static HogwartsSpells getSpells() {
         HogwartsSpells hogwartsSpells = new HogwartsSpells();
         hogwartsSpells.addSpellEvent("Fire", "Kill all enemies without pain");
         hogwartsSpells.addSpellEvent("Fire", "Kill all enemies without pain");
         hogwartsSpells.addSpellEvent("Fire", "Kill all enemies without pain");
         hogwartsSpells.addSpellEvent("Fire", "Kill all enemies without pain");
         hogwartsSpells.addSpellEvent("Fire", "Kill all enemies without pain");
+        hogwartsSpells.addSpellEvent("Water", "Kill all enemies with pain");
+        hogwartsSpells.addSpellEvent("Water", "Kill all enemies with pain");
+        hogwartsSpells.addSpellEvent("Water", "Kill all enemies with pain");
+        hogwartsSpells.addSpellEvent("Water", "Kill all enemies with pain");
         hogwartsSpells.addSpellEvent("Water", "Kill all enemies with pain");
         return hogwartsSpells;
     }
